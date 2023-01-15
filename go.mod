@@ -10,6 +10,7 @@ require (
 	github.com/google/wire v0.5.0 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/joho/godotenv v1.4.0 // indirect
+	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3 // indirect
