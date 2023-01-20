@@ -2,7 +2,6 @@
 package handlers
 
 import (
-	"RESTfulAPI_todos/error_handling"
 	"RESTfulAPI_todos/helper"
 	"RESTfulAPI_todos/pkg/database"
 	"RESTfulAPI_todos/pkg/model"
@@ -14,11 +13,11 @@ import (
 )
 
 // InsertTodos is a function that handles the CREATE/INSERT request for the API, adding a new todo to the database.
-func InsertTodos(w http.ResponseWriter, r *http.Request, db database.DBConn) {
+func InsertTodos(w http.ResponseWriter, r *http.Request, config *database.Config) {
 
-	conn, err := db.Connect()
+	conn, err := database.ConnectDB(config)
 	if err != nil {
-		error_handling.InternalServerError(w, err)
+		helper.InternalServerError(w, err)
 		logrus.Error(err)
 	}
 	defer conn.Close()
@@ -33,14 +32,14 @@ func InsertTodos(w http.ResponseWriter, r *http.Request, db database.DBConn) {
 	validate := validator.New()
 	err = validate.Struct(todo)
 	if err != nil {
-		error_handling.BadRequest(w, err)
+		helper.BadRequest(w, err)
 		logrus.Error(err)
 		return
 	}
 
 	res, err := conn.Exec("INSERT INTO TodoList(title, description) VALUES(?, ?)", todo.Title, todo.Description)
 	if err != nil {
-		error_handling.InternalServerError(w, err)
+		helper.InternalServerError(w, err)
 		logrus.Error(err)
 		return
 	}
@@ -51,6 +50,7 @@ func InsertTodos(w http.ResponseWriter, r *http.Request, db database.DBConn) {
 		return
 	}
 
+	// Prepare response
 	apiResponse := model.Response{
 		Status:  http.StatusCreated,
 		Message: "you have successfully created todo list with ID: " + strconv.FormatInt(lastID, 10),

@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"RESTfulAPI_todos/error_handling"
 	"RESTfulAPI_todos/helper"
 	"RESTfulAPI_todos/pkg/database"
 	"RESTfulAPI_todos/pkg/model"
@@ -12,13 +11,13 @@ import (
 )
 
 // handler GetIdTodos merupakan fungsi yang menangani request GETBYID/SELECTBYID pada API yang ditujukan untuk MEMBACA todo dari database.
-func GetIdTodo(w http.ResponseWriter, r *http.Request, db database.DBConn) {
+func GetIdTodo(w http.ResponseWriter, r *http.Request, config *database.Config) {
 	var todos model.Todos
 	var arrTodos []model.Todos
 
-	conn, err := db.Connect()
+	conn, err := database.ConnectDB(config)
 	if err != nil {
-		error_handling.InternalServerError(w, err)
+		helper.InternalServerError(w, err)
 		logrus.Error(err)
 	}
 	defer conn.Close()
@@ -26,28 +25,29 @@ func GetIdTodo(w http.ResponseWriter, r *http.Request, db database.DBConn) {
 	// Set log level
 	logrus.SetLevel(logrus.DebugLevel)
 
-	// Ambil parameter id dari URL
+	// Get parameter id from URL
 	params := mux.Vars(r)
 	id := params["id"]
 
 	// Check if Todo exist in the database
+	// Menjalankan query untuk menghitung/mencari jumlah baris pada tabel TodoList yang memiliki id yang sama dengan id yang dikirimkan dalam request.
 	var count int
 	if err := conn.QueryRow("SELECT COUNT(*) FROM TodoList WHERE id=?", id).Scan(&count); err != nil {
-		error_handling.InternalServerError(w, err)
+		helper.InternalServerError(w, err)
 		logrus.WithError(err).Error("Failed to check Todo existence in the database")
 		return
 	}
 
 	// Jika tidak ada baris yang memiliki id yang sama dengan id yang dikirimkan dalam request,
 	if count == 0 {
-		error_handling.NotFound(w, errors.New(" id not found in db"))
+		helper.NotFound(w, errors.New(" id not found in db"))
 		return
 	}
 
-	// MenJalankan query SELECT dengan WHERE id = id yang diambil dari URL
+	// Get Id Todo from the database
 	rows, err := conn.Query("SELECT id, title, description, status FROM TodoList WHERE id = ?", id)
 	if err != nil {
-		error_handling.InternalServerError(w, err)
+		helper.InternalServerError(w, err)
 		logrus.Error(err)
 		return
 	}
@@ -65,6 +65,7 @@ func GetIdTodo(w http.ResponseWriter, r *http.Request, db database.DBConn) {
 		}
 	}
 
+	// Prepare response
 	apiResponse := model.Response{
 		Status:  http.StatusOK,
 		Message: "Success",

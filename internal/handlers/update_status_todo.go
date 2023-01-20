@@ -1,21 +1,21 @@
 package handlers
 
 import (
-	"RESTfulAPI_todos/error_handling"
 	"RESTfulAPI_todos/helper"
 	"RESTfulAPI_todos/pkg/database"
 	"RESTfulAPI_todos/pkg/model"
 	"encoding/json"
+	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	"net/http"
 )
 
 // handler UpdateStatusTodos merupakan fungsi yang menangani request PUT/UPDATE pada API yang ditujukan untuk menghapus todo dari database.
-func UpdateStatusTodos(w http.ResponseWriter, r *http.Request, db database.DBConn) {
+func UpdateStatusTodos(w http.ResponseWriter, r *http.Request, config *database.Config) {
 
-	conn, err := db.Connect()
+	conn, err := database.ConnectDB(config)
 	if err != nil {
-		error_handling.InternalServerError(w, err)
+		helper.InternalServerError(w, err)
 		logrus.Error(err)
 	}
 	defer conn.Close()
@@ -25,7 +25,7 @@ func UpdateStatusTodos(w http.ResponseWriter, r *http.Request, db database.DBCon
 	err = json.NewDecoder(r.Body).Decode(&request)
 
 	if err != nil {
-		error_handling.InternalServerError(w, err)
+		helper.InternalServerError(w, err)
 		// Jika terjadi error saat mengambil data, log error tersebut
 		logrus.WithFields(logrus.Fields{
 			"error": err,
@@ -34,15 +34,17 @@ func UpdateStatusTodos(w http.ResponseWriter, r *http.Request, db database.DBCon
 	}
 
 	// Menyimpan data yang dikirimkan dalam request ke dalam variabel "id" dan "status"
-	id := request.Id
+	params := mux.Vars(r)
+	id := params["id"]
 	status := request.Status
 
+	// Check if Todo exist in the database
 	// Menjalankan query untuk menghitung/mencari jumlah baris pada tabel TodoList yang memiliki id yang sama dengan id yang dikirimkan dalam request.
 	var count int
 	err = conn.QueryRow("SELECT COUNT(*) FROM TodoList WHERE id=?", id).Scan(&count)
 	// Jika terjadi error saat menjalankan query, log error menggunakan logrus dan keluar dari fungsi.
 	if err != nil {
-		error_handling.InternalServerError(w, err)
+		helper.InternalServerError(w, err)
 		logrus.WithFields(logrus.Fields{
 			"error": err,
 		}).Error("Error checking id")
@@ -51,20 +53,19 @@ func UpdateStatusTodos(w http.ResponseWriter, r *http.Request, db database.DBCon
 
 	// Jika tidak ada baris yang memiliki id yang sama dengan id yang dikirimkan dalam request,
 	if count == 0 {
-		error_handling.NotFound(w, err)
+		helper.NotFound(w, err)
 		return
 	}
-
-	// Menjalankan query UPDATE untuk mengedit ststus pada baris yang memiliki id yang sama dengan id yang dikirimkan dalam request.
+	// Update field Status Todo from the database
 	_, err = conn.Exec("UPDATE TodoList SET status=? WHERE id=?", status, id)
 
 	// Jika terjadi error saat menjalankan query UPDATE, log error menggunakan logrus
 	if err != nil {
-		error_handling.InternalServerError(w, err)
+		helper.InternalServerError(w, err)
 		logrus.Print(err)
 		return
 	}
-
+	// Prepare response
 	apiResponse := model.Response{
 		Status:  http.StatusOK,
 		Message: "Success",

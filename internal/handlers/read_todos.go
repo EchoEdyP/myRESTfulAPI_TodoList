@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"RESTfulAPI_todos/error_handling"
 	"RESTfulAPI_todos/helper"
 	"RESTfulAPI_todos/pkg/database"
 	"RESTfulAPI_todos/pkg/model"
@@ -10,13 +9,13 @@ import (
 )
 
 // handler GetAllTodos merupakan fungsi yang menangani request GETALL/SELECTALL pada API yang ditujukan untuk MEMBACA todo dari database.
-func GetAllTodos(w http.ResponseWriter, r *http.Request, db database.DBConn) {
+func GetAllTodos(w http.ResponseWriter, r *http.Request, config *database.Config) {
 	var todos model.Todos
 	var arrTodos []model.Todos
 
-	conn, err := db.Connect()
+	conn, err := database.ConnectDB(config)
 	if err != nil {
-		error_handling.InternalServerError(w, err)
+		helper.InternalServerError(w, err)
 		logrus.Error(err)
 	}
 	defer conn.Close()
@@ -24,10 +23,10 @@ func GetAllTodos(w http.ResponseWriter, r *http.Request, db database.DBConn) {
 	// Set log level
 	logrus.SetLevel(logrus.DebugLevel) // logrus.DebugLevel: Menampilkan semua log, termasuk log debug.
 
-	// Menjalankan query SELECT semua data todo dari tabel TodoList di database.
+	// Get All Todo from the database
 	rows, err := conn.Query("SELECT id, title, description, status FROM TodoList")
 	if err != nil {
-		error_handling.InternalServerError(w, err)
+		helper.InternalServerError(w, err)
 		logrus.Error(err)
 		return
 	}
@@ -45,6 +44,7 @@ func GetAllTodos(w http.ResponseWriter, r *http.Request, db database.DBConn) {
 		}
 	}
 
+	// Prepare response
 	apiResponse := model.Response{
 		Status:  http.StatusOK,
 		Message: "Success",

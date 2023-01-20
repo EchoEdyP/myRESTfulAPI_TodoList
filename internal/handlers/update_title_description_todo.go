@@ -1,22 +1,22 @@
 package handlers
 
 import (
-	"RESTfulAPI_todos/error_handling"
 	"RESTfulAPI_todos/helper"
 	"RESTfulAPI_todos/pkg/database"
 	"RESTfulAPI_todos/pkg/model"
 	"encoding/json"
 	"github.com/go-playground/validator/v10"
+	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	"net/http"
 )
 
 // handler UpdateStatusTodos merupakan fungsi yang menangani request PUT/UPDATE pada API yang ditujukan untuk menghapus todo dari database.
-func UpdateTitleDescriptionTodos(w http.ResponseWriter, r *http.Request, db database.DBConn) {
+func UpdateTitleDescriptionTodos(w http.ResponseWriter, r *http.Request, config *database.Config) {
 
-	conn, err := db.Connect()
+	conn, err := database.ConnectDB(config)
 	if err != nil {
-		error_handling.InternalServerError(w, err)
+		helper.InternalServerError(w, err)
 		logrus.Error(err)
 	}
 	defer conn.Close()
@@ -26,7 +26,7 @@ func UpdateTitleDescriptionTodos(w http.ResponseWriter, r *http.Request, db data
 	err = json.NewDecoder(r.Body).Decode(&request)
 
 	if err != nil {
-		error_handling.InternalServerError(w, err)
+		helper.InternalServerError(w, err)
 		// Jika terjadi error saat mengambil data, log error tersebut
 		logrus.WithFields(logrus.Fields{
 			"error": err,
@@ -35,16 +35,18 @@ func UpdateTitleDescriptionTodos(w http.ResponseWriter, r *http.Request, db data
 	}
 
 	// Menyimpan data yang dibaca dari request ke dalam variabel id, title, dan description.
-	id := request.Id
+	params := mux.Vars(r)
+	id := params["id"]
 	title := request.Title
 	description := request.Description
 
+	// Check if Todo exist in the database
 	// Menjalankan query untuk menghitung/mencari jumlah baris pada tabel TodoList yang memiliki id yang sama dengan id yang dikirimkan dalam request.
 	var count int
 	err = conn.QueryRow("SELECT COUNT(*) FROM TodoList WHERE id=?", id).Scan(&count)
 	// Jika terjadi error saat menjalankan query, log error menggunakan logrus dan keluar dari fungsi.
 	if err != nil {
-		error_handling.InternalServerError(w, err)
+		helper.InternalServerError(w, err)
 		logrus.WithFields(logrus.Fields{
 			"error": err,
 		}).Error("Error checking id")
@@ -53,7 +55,7 @@ func UpdateTitleDescriptionTodos(w http.ResponseWriter, r *http.Request, db data
 
 	// Jika tidak ada baris yang memiliki id yang sama dengan id yang dikirimkan dalam request,
 	if count == 0 {
-		error_handling.NotFound(w, err)
+		helper.NotFound(w, err)
 		return
 	}
 
@@ -66,7 +68,7 @@ func UpdateTitleDescriptionTodos(w http.ResponseWriter, r *http.Request, db data
 
 	// Jika terjadi error saat menjalankan validasi, log error menggunakan logrus
 	if err != nil {
-		error_handling.BadRequest(w, err)
+		helper.BadRequest(w, err)
 		logrus.WithFields(logrus.Fields{"error": err}).Error("Invalid update")
 		return
 	}
@@ -82,10 +84,11 @@ func UpdateTitleDescriptionTodos(w http.ResponseWriter, r *http.Request, db data
 
 	// Jika terjadi error saat menjalankan query UPDATE, log error menggunakan logrus
 	if err != nil {
-		error_handling.InternalServerError(w, err)
+		helper.InternalServerError(w, err)
 		logrus.Print(err)
 	}
 
+	// Prepare response
 	apiResponse := model.Response{
 		Status:  http.StatusOK,
 		Message: "Success",

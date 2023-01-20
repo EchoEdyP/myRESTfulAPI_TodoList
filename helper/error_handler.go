@@ -1,7 +1,6 @@
-package error_handling
+package helper
 
 import (
-	"RESTfulAPI_todos/helper"
 	"RESTfulAPI_todos/pkg/model"
 	"net/http"
 )
@@ -16,7 +15,7 @@ func InternalServerError(w http.ResponseWriter, err error) {
 		Data:    err,
 	}
 	w.WriteHeader(apiResponse.Status)
-	helper.WriteToResponseBody(w, apiResponse)
+	WriteToResponseBody(w, apiResponse)
 }
 
 func BadRequest(w http.ResponseWriter, err error) {
@@ -29,7 +28,7 @@ func BadRequest(w http.ResponseWriter, err error) {
 		Data:    err,
 	}
 	w.WriteHeader(apiResponse.Status)
-	helper.WriteToResponseBody(w, apiResponse)
+	WriteToResponseBody(w, apiResponse)
 }
 
 func NotFound(w http.ResponseWriter, err error) {
@@ -42,5 +41,5 @@ func NotFound(w http.ResponseWriter, err error) {
 		Data:    err,
 	}
 	w.WriteHeader(apiResponse.Status)
-	helper.WriteToResponseBody(w, apiResponse)
+	WriteToResponseBody(w, apiResponse)
 }
