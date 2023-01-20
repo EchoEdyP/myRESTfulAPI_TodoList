@@ -1,6 +1,7 @@
 package main
 
 import (
+	"RESTfulAPI_todos/internal/handlers"
 	"RESTfulAPI_todos/pkg/database"
 	"RESTfulAPI_todos/pkg/router"
 	"fmt"
@@ -22,7 +23,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err.Error())
 	}
-	router := router.NewRouter(conn, &cfg)
+
+	todoHandlers := handlers.NewTodoListhandlersImpl(conn)
+
+	router := router.NewRouter(conn, &cfg, todoHandlers)
 
 	fmt.Println("Connected to port 1234")
 	log.Fatal(http.ListenAndServe(":1234", router))
