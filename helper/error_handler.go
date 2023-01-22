@@ -24,7 +24,7 @@ func BadRequest(w http.ResponseWriter, err error) {
 
 	apiResponse := model.Response{
 		Status:  http.StatusBadRequest,
-		Message: "Bad Request",
+		Message: err.Error(),
 		Data:    err,
 	}
 	w.WriteHeader(apiResponse.Status)
