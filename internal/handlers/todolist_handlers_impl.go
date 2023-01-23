@@ -23,15 +23,9 @@ func NewTodoListhandlersImpl(DB *sql.DB) *TodoListhandlersImpl {
 }
 
 func (handlers *TodoListhandlersImpl) Create(w http.ResponseWriter, r *http.Request, config *database.Config) error {
-	conn, err := database.ConnectDB(config)
-	if err != nil {
-		helper.InternalServerError(w, err)
-		logrus.Error(err)
-	}
-	defer conn.Close()
 
 	var todo model.Todos
-	err = json.NewDecoder(r.Body).Decode(&todo)
+	err := json.NewDecoder(r.Body).Decode(&todo)
 	if err != nil {
 		logrus.Error(err)
 		panic(err)
@@ -45,7 +39,7 @@ func (handlers *TodoListhandlersImpl) Create(w http.ResponseWriter, r *http.Requ
 		return nil
 	}
 
-	res, err := conn.Exec("INSERT INTO TodoList(title, description) VALUES(?, ?)", todo.Title, todo.Description)
+	res, err := handlers.DB.Exec("INSERT INTO TodoList(title, description) VALUES(?, ?)", todo.Title, todo.Description)
 	if err != nil {
 		helper.InternalServerError(w, err)
 		logrus.Error(err)
@@ -78,18 +72,11 @@ func (handlers *TodoListhandlersImpl) ReadAll(w http.ResponseWriter, r *http.Req
 	var todos model.Todos
 	var arrTodos []model.Todos
 
-	conn, err := database.ConnectDB(config)
-	if err != nil {
-		helper.InternalServerError(w, err)
-		logrus.Error(err)
-	}
-	defer conn.Close()
-
 	// Set log level
 	logrus.SetLevel(logrus.DebugLevel) // logrus.DebugLevel: Menampilkan semua log, termasuk log debug.
 
 	// Get All Todo from the database
-	rows, err := conn.Query("SELECT id, title, description, status FROM TodoList")
+	rows, err := handlers.DB.Query("SELECT id, title, description, status FROM TodoList")
 	if err != nil {
 		helper.InternalServerError(w, err)
 		logrus.Error(err)
@@ -129,13 +116,6 @@ func (handlers *TodoListhandlersImpl) ReadById(w http.ResponseWriter, r *http.Re
 	var todos model.Todos
 	var arrTodos []model.Todos
 
-	conn, err := database.ConnectDB(config)
-	if err != nil {
-		helper.InternalServerError(w, err)
-		logrus.Error(err)
-	}
-	defer conn.Close()
-
 	// Set log level
 	logrus.SetLevel(logrus.DebugLevel)
 
@@ -146,7 +126,7 @@ func (handlers *TodoListhandlersImpl) ReadById(w http.ResponseWriter, r *http.Re
 	// Check if Todo exist in the database
 	// Menjalankan query untuk menghitung/mencari jumlah baris pada tabel TodoList yang memiliki id yang sama dengan id yang dikirimkan dalam request.
 	var count int
-	if err := conn.QueryRow("SELECT COUNT(*) FROM TodoList WHERE id=?", id).Scan(&count); err != nil {
+	if err := handlers.DB.QueryRow("SELECT COUNT(*) FROM TodoList WHERE id=?", id).Scan(&count); err != nil {
 		helper.InternalServerError(w, err)
 		logrus.WithError(err).Error("Failed to check Todo existence in the database")
 		return nil
@@ -159,7 +139,7 @@ func (handlers *TodoListhandlersImpl) ReadById(w http.ResponseWriter, r *http.Re
 	}
 
 	// Get Id Todo from the database
-	rows, err := conn.Query("SELECT id, title, description, status FROM TodoList WHERE id = ?", id)
+	rows, err := handlers.DB.Query("SELECT id, title, description, status FROM TodoList WHERE id = ?", id)
 	if err != nil {
 		helper.InternalServerError(w, err)
 		logrus.Error(err)
@@ -196,16 +176,10 @@ func (handlers *TodoListhandlersImpl) ReadById(w http.ResponseWriter, r *http.Re
 }
 
 func (handlers *TodoListhandlersImpl) UpdateTitleAndDescription(w http.ResponseWriter, r *http.Request, config *database.Config) error {
-	conn, err := database.ConnectDB(config)
-	if err != nil {
-		helper.InternalServerError(w, err)
-		logrus.Error(err)
-	}
-	defer conn.Close()
 
 	// Membaca request yang dikirimkan dalam format raw JSON
 	var request model.Todos
-	err = json.NewDecoder(r.Body).Decode(&request)
+	err := json.NewDecoder(r.Body).Decode(&request)
 
 	if err != nil {
 		helper.InternalServerError(w, err)
@@ -225,7 +199,7 @@ func (handlers *TodoListhandlersImpl) UpdateTitleAndDescription(w http.ResponseW
 	// Check if Todo exist in the database
 	// Menjalankan query untuk menghitung/mencari jumlah baris pada tabel TodoList yang memiliki id yang sama dengan id yang dikirimkan dalam request.
 	var count int
-	err = conn.QueryRow("SELECT COUNT(*) FROM TodoList WHERE id=?", id).Scan(&count)
+	err = handlers.DB.QueryRow("SELECT COUNT(*) FROM TodoList WHERE id=?", id).Scan(&count)
 	// Jika terjadi error saat menjalankan query, log error menggunakan logrus dan keluar dari fungsi.
 	if err != nil {
 		helper.InternalServerError(w, err)
@@ -257,11 +231,11 @@ func (handlers *TodoListhandlersImpl) UpdateTitleAndDescription(w http.ResponseW
 
 	// Menjalankan query UPDATE untuk mengedit title dan description pada baris yang memiliki id yang sama dengan id yang dikirimkan dalam request.
 	if title != "" && description == "" {
-		_, err = conn.Exec("UPDATE TodoList SET title=? WHERE id=?", title, id)
+		_, err = handlers.DB.Exec("UPDATE TodoList SET title=? WHERE id=?", title, id)
 	} else if description != "" && title == "" {
-		_, err = conn.Exec("UPDATE TodoList SET description=? WHERE id=?", description, id)
+		_, err = handlers.DB.Exec("UPDATE TodoList SET description=? WHERE id=?", description, id)
 	} else {
-		_, err = conn.Exec("UPDATE TodoList SET title=?, description=? WHERE id=?", title, description, id)
+		_, err = handlers.DB.Exec("UPDATE TodoList SET title=?, description=? WHERE id=?", title, description, id)
 	}
 
 	// Jika terjadi error saat menjalankan query UPDATE, log error menggunakan logrus
@@ -287,16 +261,10 @@ func (handlers *TodoListhandlersImpl) UpdateTitleAndDescription(w http.ResponseW
 }
 
 func (handlers *TodoListhandlersImpl) UpdateStatus(w http.ResponseWriter, r *http.Request, config *database.Config) error {
-	conn, err := database.ConnectDB(config)
-	if err != nil {
-		helper.InternalServerError(w, err)
-		logrus.Error(err)
-	}
-	defer conn.Close()
 
 	// Membaca request yang dikirimkan dalam format raw JSON
 	var request model.Todos
-	err = json.NewDecoder(r.Body).Decode(&request)
+	err := json.NewDecoder(r.Body).Decode(&request)
 
 	if err != nil {
 		helper.InternalServerError(w, err)
@@ -315,7 +283,7 @@ func (handlers *TodoListhandlersImpl) UpdateStatus(w http.ResponseWriter, r *htt
 	// Check if Todo exist in the database
 	// Menjalankan query untuk menghitung/mencari jumlah baris pada tabel TodoList yang memiliki id yang sama dengan id yang dikirimkan dalam request.
 	var count int
-	err = conn.QueryRow("SELECT COUNT(*) FROM TodoList WHERE id=?", id).Scan(&count)
+	err = handlers.DB.QueryRow("SELECT COUNT(*) FROM TodoList WHERE id=?", id).Scan(&count)
 	// Jika terjadi error saat menjalankan query, log error menggunakan logrus dan keluar dari fungsi.
 	if err != nil {
 		helper.InternalServerError(w, err)
@@ -331,7 +299,7 @@ func (handlers *TodoListhandlersImpl) UpdateStatus(w http.ResponseWriter, r *htt
 		return nil
 	}
 	// Update field Status Todo from the database
-	_, err = conn.Exec("UPDATE TodoList SET status=? WHERE id=?", status, id)
+	_, err = handlers.DB.Exec("UPDATE TodoList SET status=? WHERE id=?", status, id)
 
 	// Jika terjadi error saat menjalankan query UPDATE, log error menggunakan logrus
 	if err != nil {
@@ -356,12 +324,6 @@ func (handlers *TodoListhandlersImpl) UpdateStatus(w http.ResponseWriter, r *htt
 }
 
 func (handlers *TodoListhandlersImpl) Delete(w http.ResponseWriter, r *http.Request, config *database.Config) error {
-	conn, err := database.ConnectDB(config)
-	if err != nil {
-		helper.InternalServerError(w, err)
-		logrus.Error(err)
-	}
-	defer conn.Close()
 
 	// Get parameter id from URL
 	params := mux.Vars(r)
@@ -375,7 +337,7 @@ func (handlers *TodoListhandlersImpl) Delete(w http.ResponseWriter, r *http.Requ
 
 	// Check if Todo exist in the database
 	var count int
-	if err := conn.QueryRow("SELECT COUNT(*) FROM TodoList WHERE id=?", id).Scan(&count); err != nil {
+	if err := handlers.DB.QueryRow("SELECT COUNT(*) FROM TodoList WHERE id=?", id).Scan(&count); err != nil {
 		helper.InternalServerError(w, err)
 		logrus.WithError(err).Error("Failed to check Todo existence in the database")
 		return nil
@@ -387,7 +349,7 @@ func (handlers *TodoListhandlersImpl) Delete(w http.ResponseWriter, r *http.Requ
 	}
 
 	// Delete Todo from the database
-	if _, err := conn.Exec("DELETE FROM TodoList WHERE id=?", id); err != nil {
+	if _, err := handlers.DB.Exec("DELETE FROM TodoList WHERE id=?", id); err != nil {
 		helper.InternalServerError(w, err)
 		logrus.WithError(err).Error("Failed to delete Todo from the database")
 		return nil
